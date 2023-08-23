@@ -92,6 +92,7 @@ func main() {
 		return c.String(http.StatusOK, "ok")
 	})
 	e.POST("/", serve)
+	e.GET("/aip", serveAIP)
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

@@ -9,6 +9,7 @@ require (
 )
 
 require (
+	github.com/anaskhan96/soup v1.2.5 // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
