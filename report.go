@@ -60,7 +60,7 @@ type Waypoint struct {
 	Longitude       float64 `json:"longitude"`
 	MagneticTrack   string  `json:"magneticTrack"`
 	MagneticHeading string  `json:"magneticHeading"`
-	Wind            string  `json:"wind"`
+	GroundSpeed     string  `json:"groundSpeed"`
 	Distance        string  `json:"distance"`
 	Duration        string  `json:"duration"`
 }
