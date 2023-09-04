@@ -6,6 +6,6 @@ WORKDIR /app
 RUN CGO_ENABLED=0 GOOS=linux go build -o main ./...
 
 FROM ubuntu
-RUN apt-get update && apt-get install pdftk wkhtmltopdf
+RUN apt-get update && apt-get install pdftk wkhtmltopdf -y
 COPY --from=builder /app .
 CMD ["./main"]
