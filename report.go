@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/aymerick/raymond"
@@ -22,7 +23,7 @@ var reportTemplate string
 
 func generateReport(c echo.Context) error {
 	var plan Plan
-	err := c.Bind(&plan)
+	err := json.Unmarshal([]byte(c.QueryParam("payload")), &plan)
 	if err != nil {
 		return err
 	}
