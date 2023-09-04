@@ -19,7 +19,7 @@ func main() {
 		return c.String(http.StatusOK, "ok")
 	})
 	e.POST("/plan", generatePlan)
-	e.POST("/report", generateReport)
+	e.GET("/report", generateReport)
 	e.GET("/aip", serveAIP)
 	port := os.Getenv("PORT")
 	if port == "" {
