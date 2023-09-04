@@ -5,7 +5,7 @@ ADD . /app
 WORKDIR /app
 RUN CGO_ENABLED=0 GOOS=linux go build -o main ./...
 
-FROM alpine:3.8
-RUN apk add pdftk wkhtmltopdf
+FROM ubuntu
+RUN apt-get install pdftk wkhtmltopdf
 COPY --from=builder /app .
 CMD ["./main"]
