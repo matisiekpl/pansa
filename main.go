@@ -20,7 +20,7 @@ func main() {
 	})
 	e.POST("/plan", generatePlan)
 	e.GET("/report", generateReport)
-	e.GET("/aip", serveAIP)
+	e.GET("/aip", serveAD)
 	e.GET("/notam/:icao", fetchNotam)
 	port := os.Getenv("PORT")
 	if port == "" {

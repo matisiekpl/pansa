@@ -14,20 +14,21 @@ type AIP struct {
 	Icao string `json:"icao"`
 	Name string `json:"name"`
 	Link string `json:"link"`
+	Type string `json:"kind"`
 }
 
 var cache = make(map[string][]AIP)
 
-func getAIPs() []AIP {
+func getADs() []AIP {
 	if val, ok := cache[time.Now().Format(time.DateOnly)]; ok {
 		return val
 	}
-	cache[time.Now().Format(time.DateOnly)] = append(listAIPs("https://www.ais.pansa.pl/publikacje/aip-vfr/"), listAIPs("https://www.ais.pansa.pl/publikacje/aip-ifr/")...)
+	cache[time.Now().Format(time.DateOnly)] = append(listADs("https://www.ais.pansa.pl/publikacje/aip-vfr/"), listADs("https://www.ais.pansa.pl/publikacje/aip-ifr/")...)
 	logrus.Infof("Downloaded %d AIPs", len(cache[time.Now().Format(time.DateOnly)]))
 	return cache[time.Now().Format(time.DateOnly)]
 }
 
-func listAIPs(source string) []AIP {
+func listADs(source string) []AIP {
 	var aips []AIP
 	resp, err := soup.Get(source)
 	if err != nil {
@@ -46,6 +47,36 @@ func listAIPs(source string) []AIP {
 					Icao: icao,
 					Name: name,
 					Link: url,
+					Type: "AD",
+				})
+			}
+		}
+
+		for _, link := range element.FindAll("a") {
+			url := strings.ReplaceAll(strings.ReplaceAll(link.Attrs()["href"], " ", ""), "	", "")
+			name := strings.TrimSpace(strings.ReplaceAll(link.Text(), "\t", ""))
+			if strings.Contains(url, "_Sup_") {
+				aips = append(aips, AIP{
+					Icao: "",
+					Name: name,
+					Link: url,
+					Type: "SUP",
+				})
+			}
+			if strings.Contains(url, "_GEN_") {
+				aips = append(aips, AIP{
+					Icao: "",
+					Name: name,
+					Link: url,
+					Type: "GEN",
+				})
+			}
+			if strings.Contains(url, "_ENR_") {
+				aips = append(aips, AIP{
+					Icao: "",
+					Name: name,
+					Link: url,
+					Type: "ENR",
 				})
 			}
 		}
@@ -53,6 +84,6 @@ func listAIPs(source string) []AIP {
 	return aips
 }
 
-func serveAIP(c echo.Context) error {
-	return c.JSON(http.StatusOK, getAIPs())
+func serveAD(c echo.Context) error {
+	return c.JSON(http.StatusOK, getADs())
 }
