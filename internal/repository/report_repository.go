@@ -1,37 +1,41 @@
-package main
+package repository
 
 import (
 	"bytes"
 	_ "embed"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/aymerick/raymond"
 	sm "github.com/flopp/go-staticmaps"
 	"github.com/golang/geo/s2"
-	"github.com/labstack/echo/v4"
+	"github.com/matisiekpl/pansa-plan/internal/model"
 	"image"
 	"image/color"
 	"image/png"
-	"net/http"
 	"strings"
 )
 
-//go:embed report.html
+type ReportRepository interface {
+	GenerateReport(plan model.Plan) ([]byte, error)
+}
+
+type reportRepository struct {
+}
+
+func newReportRepository() ReportRepository {
+	return &reportRepository{}
+}
+
+//go:embed assets/report.html
 var reportTemplate string
 
-func generateReport(c echo.Context) error {
-	var plan Plan
-	err := json.Unmarshal([]byte(c.QueryParam("payload")), &plan)
-	if err != nil {
-		return err
-	}
-	mapImage, err := createMapImage(plan)
+func (r reportRepository) GenerateReport(plan model.Plan) ([]byte, error) {
+	mapImage, err := r.createMapImage(plan)
 	var mapImageBuffer bytes.Buffer
 	err = png.Encode(&mapImageBuffer, mapImage)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	encodedMapImage := "data:image/png;base64," + base64.StdEncoding.EncodeToString(mapImageBuffer.Bytes())
 	result, err := raymond.Render(reportTemplate, map[string]interface{}{
@@ -40,32 +44,14 @@ func generateReport(c echo.Context) error {
 	})
 	pdf, err := wkhtmltopdf.NewPDFGenerator()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	pdf.AddPage(wkhtmltopdf.NewPageReader(strings.NewReader(result)))
 	err = pdf.Create()
-	return c.Blob(http.StatusOK, "application/pdf", pdf.Bytes())
+	return pdf.Bytes(), nil
 }
 
-type Plan struct {
-	Name      string     `json:"name"`
-	Distance  string     `json:"distance"`
-	Duration  string     `json:"duration"`
-	Waypoints []Waypoint `json:"waypoints"`
-}
-
-type Waypoint struct {
-	Name            string  `json:"name"`
-	Latitude        float64 `json:"latitude"`
-	Longitude       float64 `json:"longitude"`
-	MagneticTrack   string  `json:"magneticTrack"`
-	MagneticHeading string  `json:"magneticHeading"`
-	GroundSpeed     string  `json:"groundSpeed"`
-	Distance        string  `json:"distance"`
-	Duration        string  `json:"duration"`
-}
-
-func createMapImage(plan Plan) (image.Image, error) {
+func (reportRepository) createMapImage(plan model.Plan) (image.Image, error) {
 	ctx := sm.NewContext()
 	for i, waypoint := range plan.Waypoints {
 		marker := sm.NewMarker(
