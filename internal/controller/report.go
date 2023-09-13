@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"encoding/json"
 	"github.com/labstack/echo/v4"
 	"github.com/matisiekpl/pansa-plan/internal/model"
 	"github.com/matisiekpl/pansa-plan/internal/service"
@@ -17,7 +18,7 @@ type reportController struct {
 
 func (r reportController) Generate(c echo.Context) error {
 	var plan model.Plan
-	err := c.Bind(&plan)
+	err := json.Unmarshal([]byte(c.QueryParam("payload")), &plan)
 	if err != nil {
 		return err
 	}
