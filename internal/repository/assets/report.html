@@ -1,46 +1,75 @@
-<html lang="pl">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">.
-    <title>Raport lotu</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
-    <style>
-        h1 {
-            text-align: center;
-        }
-        img,table {
-            margin-left: auto;
-            margin-right: auto;
-            min-width: 80%;
-            display: block;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan lotu</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.16/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body style="padding: 16px;">
-<h1 class="title">Plan lotu</h1>
-<table class="table is-bordered">
-    <tr>
-        <td></td>
-        <td>Punkt</td>
-        <td>NKDM</td>
-        <td>KM</td>
-        <td>Dystans</td>
-        <td>Prędkość podróżna</td>
-        <td>Czas</td>
-    </tr>
-    {{#each plan.Waypoints}}
-    <tr>
-        <td>{{inc @index}}</td>
-        <td>{{this.Name}}</td>
-        <td>{{this.MagneticTrack}}</td>
-        <td>{{this.MagneticHeading}}</td>
-        <td>{{this.Distance}}</td>
-        <td>{{this.GroundSpeed}}</td>
-        <td>{{this.Duration}}</td>
-    </tr>
-    {{/each}}
-</table>
-<div style="width: 100%;">
-    <img src="{{map}}" alt="Mapa">
+<body class="font-sans bg-white">
+
+<div class="container mx-auto p-8">
+    <header class="text-center">
+        <h1 class="text-3xl font-bold">Plan lotu</h1>
+        <p class="text-lg text-gray-600">Wiatr: {{plan.windSpeed}} / {{plan.windDirection}}</p>
+        <p class="text-lg text-gray-600">TAS: {{plan.speed}}</p>
+        <p class="text-lg text-gray-600">Trasa: {{plan.distance}} / {{plan.duration}}</p>
+    </header>
+
+    <div class="mb-8 text-center text-italic">
+        https://strefypowietrzne.pl/
+    </div>
+
+    <main>
+        <!-- Route Plan Table -->
+        <table class="w-full border-collapse border border-gray-300 mb-8">
+            <thead>
+            <tr>
+                <th class="border border-gray-300 p-2">#</th>
+                <th class="border border-gray-300 p-2">Punkt</th>
+                <th class="border border-gray-300 p-2">NKDM</th>
+                <th class="border border-gray-300 p-2">KM</th>
+                <th class="border border-gray-300 p-2">Dystans</th>
+                <th class="border border-gray-300 p-2">Prędkość podróżna</th>
+                <th class="border border-gray-300 p-2">Czas</th>
+            </tr>
+            </thead>
+            <tbody>
+            {{#each plan.Waypoints}}
+            <tr>
+                <td class="border border-gray-300 p-2">{{inc @index}}</td>
+                <td class="border border-gray-300 p-2">{{this.Name}}</td>
+                <td class="border border-gray-300 p-2">{{this.MagneticTrack}}</td>
+                <td class="border border-gray-300 p-2">{{this.MagneticHeading}}</td>
+                <td class="border border-gray-300 p-2">{{this.Distance}}</td>
+                <td class="border border-gray-300 p-2">{{this.GroundSpeed}}</td>
+                <td class="border border-gray-300 p-2">{{this.Duration}}</td>
+            </tr>
+            {{/each}}
+            </tbody>
+        </table>
+
+
+        <table class="w-full border-collapse border border-gray-300">
+            <thead>
+            <tr>
+                <th class="border border-gray-300 p-2">ICAO</th>
+                <th class="border border-gray-300 p-2">METAR</th>
+                <th class="border border-gray-300 p-2">TAF</th>
+            </tr>
+            </thead>
+            <tbody>
+            {{#each weather}}
+            <tr>
+                <td class="border border-gray-300 p-2">{{this.Name}}</td>
+                <td class="border border-gray-300 p-2">{{this.METAR}}</td>
+                <td class="border border-gray-300 p-2">{{this.TAF}}</td>
+            </tr>
+            {{/each}}
+            </tbody>
+        </table>
+    </main>
 </div>
+
 </body>
 </html>

@@ -2,6 +2,7 @@ package model
 
 type Waypoint struct {
 	Name            string  `json:"name"`
+	Icao            string  `json:"icao"`
 	Latitude        float64 `json:"latitude"`
 	Longitude       float64 `json:"longitude"`
 	MagneticTrack   string  `json:"magneticTrack"`

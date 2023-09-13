@@ -17,7 +17,7 @@ import (
 )
 
 type ReportRepository interface {
-	GenerateReport(plan model.Plan) ([]byte, error)
+	GenerateReport(plan model.Plan, weather []model.Weather) ([]byte, error)
 }
 
 type reportRepository struct {
@@ -30,7 +30,7 @@ func newReportRepository() ReportRepository {
 //go:embed assets/report.html
 var reportTemplate string
 
-func (r reportRepository) GenerateReport(plan model.Plan) ([]byte, error) {
+func (r reportRepository) GenerateReport(plan model.Plan, weather []model.Weather) ([]byte, error) {
 	mapImage, err := r.createMapImage(plan)
 	var mapImageBuffer bytes.Buffer
 	err = png.Encode(&mapImageBuffer, mapImage)
@@ -39,8 +39,9 @@ func (r reportRepository) GenerateReport(plan model.Plan) ([]byte, error) {
 	}
 	encodedMapImage := "data:image/png;base64," + base64.StdEncoding.EncodeToString(mapImageBuffer.Bytes())
 	result, err := raymond.Render(reportTemplate, map[string]interface{}{
-		"plan": plan,
-		"map":  encodedMapImage,
+		"plan":    plan,
+		"map":     encodedMapImage,
+		"weather": weather,
 	})
 	pdf, err := wkhtmltopdf.NewPDFGenerator()
 	if err != nil {

@@ -17,7 +17,7 @@ type services struct {
 func NewServices(repositories repository.Repositories) Services {
 	publicationService := newPublicationService(repositories.Publication())
 	notamService := newNotamService(repositories.Notam())
-	reportService := newReportService(repositories.Report())
+	reportService := newReportService(repositories.Report(), repositories.Weather())
 	return &services{
 		publication: publicationService,
 		report:      reportService,
