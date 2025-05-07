@@ -254,38 +254,33 @@ func (r *publicationRepository) combine(tabs *PansaTabData, amendmentLink string
 
 	for _, tab := range tabs.Tabs {
 		for _, content := range tab.Contents {
-			var processMenuItem func(item PansaMenuItem, itemType string)
-			processMenuItem = func(item PansaMenuItem, itemType string) {
+			var processMenuItem func(item PansaMenuItem)
+			processMenuItem = func(item PansaMenuItem) {
 				if item.Href != "" {
-					pubType := itemType
-					if strings.Contains(item.Title, "AD") {
-						pubType = "AD"
-					} else if strings.Contains(item.Title, "ENR") {
-						pubType = "ENR"
-					} else if strings.Contains(item.Title, "GEN") {
-						pubType = "GEN"
-					}
-
-					link := item.Href
-					if itemType == "item" {
-						link = r.getPDFLink(amendmentLink, item.Href)
+					pubType := model.PublicationTypeUnknown
+					if strings.Contains(item.Href, "AD") {
+						pubType = model.PublicationTypeAD
+					} else if strings.Contains(item.Href, "ENR") {
+						pubType = model.PublicationTypeENR
+					} else if strings.Contains(item.Href, "GEN") {
+						pubType = model.PublicationTypeGEN
 					}
 
 					publications = append(publications, model.Publication{
 						Icao: r.extractIcao(item.Title),
 						Name: strings.TrimSpace(item.Title),
-						Link: link,
+						Link: r.getPDFLink(amendmentLink, item.Href),
 						Type: pubType,
 					})
 				}
 
 				for _, child := range item.Children {
-					processMenuItem(child, "item")
+					processMenuItem(child)
 				}
 			}
 
 			for _, menu := range content.Menu {
-				processMenuItem(menu, "menu")
+				processMenuItem(menu)
 			}
 		}
 	}
