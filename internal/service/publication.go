@@ -6,7 +6,7 @@ import (
 )
 
 type PublicationService interface {
-	Index() []model.Publication
+	Index(language model.Language) []model.Publication
 }
 
 type publicationService struct {
@@ -17,6 +17,6 @@ func newPublicationService(publicationRepository repository.PublicationRepositor
 	return &publicationService{publicationRepository}
 }
 
-func (p publicationService) Index() []model.Publication {
-	return p.publicationRepository.Index()
+func (p publicationService) Index(language model.Language) []model.Publication {
+	return p.publicationRepository.Index(language)
 }

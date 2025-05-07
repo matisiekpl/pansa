@@ -2,6 +2,7 @@ package controller
 
 import (
 	"github.com/labstack/echo/v4"
+	"github.com/matisiekpl/pansa-plan/internal/model"
 	"github.com/matisiekpl/pansa-plan/internal/service"
 	"net/http"
 )
@@ -19,5 +20,9 @@ func newPublicationController(publicationService service.PublicationService) Pub
 }
 
 func (p publicationController) Index(c echo.Context) error {
-	return c.JSON(http.StatusOK, p.publicationService.Index())
+	language := c.QueryParam("language")
+	if language == "" {
+		language = string(model.LanguagePolish)
+	}
+	return c.JSON(http.StatusOK, p.publicationService.Index(model.Language(language)))
 }

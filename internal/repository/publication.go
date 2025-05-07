@@ -92,16 +92,19 @@ type PansaTabData struct {
 }
 
 type PublicationRepository interface {
-	Index() []model.Publication
+	Index(language model.Language) []model.Publication
 }
 
 type publicationRepository struct {
-	cache map[string][]model.Publication
+	cache map[model.Language]map[string][]model.Publication
 }
 
 func newPublicationRepository() PublicationRepository {
 	return &publicationRepository{
-		cache: make(map[string][]model.Publication),
+		cache: map[model.Language]map[string][]model.Publication{
+			model.LanguageEnglish: make(map[string][]model.Publication),
+			model.LanguagePolish:  make(map[string][]model.Publication),
+		},
 	}
 }
 
@@ -112,23 +115,23 @@ const (
 	PublicationSourceIFR PublicationSource = "ifr"
 )
 
-func (r *publicationRepository) Index() []model.Publication {
+func (r *publicationRepository) Index(language model.Language) []model.Publication {
 	cacheKey := time.Now().Format(time.DateOnly)
 
-	if cached, exists := r.cache[cacheKey]; exists {
+	if cached, exists := r.cache[language][cacheKey]; exists {
 		logrus.Infof("Found cached %d publications for %s", len(cached), cacheKey)
 		return cached
 	}
 
-	vfrPublications := r.fetch(PublicationSourceVFR)
-	ifrPublications := r.fetch(PublicationSourceIFR)
+	vfrPublications := r.fetch(PublicationSourceVFR, language)
+	ifrPublications := r.fetch(PublicationSourceIFR, language)
 	publications := append(vfrPublications, ifrPublications...)
 
-	r.cache[cacheKey] = publications
+	r.cache[language][cacheKey] = publications
 	return publications
 }
 
-func (r *publicationRepository) fetch(source PublicationSource) []model.Publication {
+func (r *publicationRepository) fetch(source PublicationSource, language model.Language) []model.Publication {
 	link, err := r.findEAIPLink(fmt.Sprintf("https://www.ais.pansa.pl/publikacje/aip-%s/", source), source)
 	if err != nil {
 		logrus.Error(err)
@@ -153,7 +156,7 @@ func (r *publicationRepository) fetch(source PublicationSource) []model.Publicat
 
 	logrus.WithField("source", source).Infof("Extracted %d tabs", len(tabs.Tabs))
 
-	publications := r.combine(tabs, amendmentLink, source)
+	publications := r.combine(tabs, amendmentLink, source, language)
 	publications = r.filterDuplicates(publications)
 
 	logrus.WithField("source", source).Infof("Found %d publications", len(publications))
@@ -305,60 +308,60 @@ func (r *publicationRepository) extractIcao(name string) string {
 	return ""
 }
 
-func (r *publicationRepository) combine(tabs *PansaTabData, amendmentLink string, source PublicationSource) []model.Publication {
+func (r *publicationRepository) combine(tabs *PansaTabData, amendmentLink string, source PublicationSource, language model.Language) []model.Publication {
 	var publications []model.Publication
 
 	for _, tab := range tabs.Tabs {
-		for _, content := range tab.Contents {
-			if tab.Title == "SUPs" && content.Table != nil {
-				for _, row := range content.Table.Rows {
-					href := strings.TrimSpace(row.Year.Href)
-					if href != "" {
-						icao := r.extractIcao(row.Subject.Text)
-						publications = append(publications, model.Publication{
-							Icao: icao,
-							Name: r.standardizeSpaces(row.Subject.Text),
-							Link: r.getPDFLink(amendmentLink, href),
-							Type: model.PublicationTypeSUP,
-						})
-					}
-				}
-			} else {
-				var processMenuItem func(item PansaMenuItem)
-				processMenuItem = func(item PansaMenuItem) {
-					if item.Href != "" {
-						pubType := model.PublicationTypeUnknown
-						if strings.Contains(item.Href, "AD") {
-							pubType = model.PublicationTypeAD
-						} else if strings.Contains(item.Href, "ENR") {
-							pubType = model.PublicationTypeENR
-						} else if strings.Contains(item.Href, "GEN") {
-							pubType = model.PublicationTypeGEN
-						}
-
-						icao := r.extractIcao(item.Title)
-						if pubType == model.PublicationTypeAD && icao == "" {
-							icao = "INFO"
-						}
-
-						publications = append(publications, model.Publication{
-							Icao: icao,
-							Name: r.standardizeSpaces(strings.ToUpper(string(source)) + " " + item.Title),
-							Link: r.getPDFLink(amendmentLink, item.Href),
-							Type: pubType,
-						})
-					}
-
-					for _, child := range item.Children {
-						processMenuItem(child)
-					}
-				}
-
-				for _, menu := range content.Menu {
-					processMenuItem(menu)
+		content := tab.Contents[string(language)]
+		if tab.Title == "SUPs" && content.Table != nil {
+			for _, row := range content.Table.Rows {
+				href := strings.TrimSpace(row.Year.Href)
+				if href != "" {
+					icao := r.extractIcao(row.Subject.Text)
+					publications = append(publications, model.Publication{
+						Icao: icao,
+						Name: r.standardizeSpaces(row.Subject.Text),
+						Link: r.getPDFLink(amendmentLink, href),
+						Type: model.PublicationTypeSUP,
+					})
 				}
 			}
+		} else {
+			var processMenuItem func(item PansaMenuItem)
+			processMenuItem = func(item PansaMenuItem) {
+				if item.Href != "" {
+					pubType := model.PublicationTypeUnknown
+					if strings.Contains(item.Href, "AD") {
+						pubType = model.PublicationTypeAD
+					} else if strings.Contains(item.Href, "ENR") {
+						pubType = model.PublicationTypeENR
+					} else if strings.Contains(item.Href, "GEN") {
+						pubType = model.PublicationTypeGEN
+					}
+
+					icao := r.extractIcao(item.Title)
+					if pubType == model.PublicationTypeAD && icao == "" {
+						icao = "INFO"
+					}
+
+					publications = append(publications, model.Publication{
+						Icao: icao,
+						Name: r.standardizeSpaces(strings.ToUpper(string(source)) + " " + item.Title),
+						Link: r.getPDFLink(amendmentLink, item.Href),
+						Type: pubType,
+					})
+				}
+
+				for _, child := range item.Children {
+					processMenuItem(child)
+				}
+			}
+
+			for _, menu := range content.Menu {
+				processMenuItem(menu)
+			}
 		}
+
 	}
 
 	filteredPublications := make([]model.Publication, 0)
