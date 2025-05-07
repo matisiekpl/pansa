@@ -73,6 +73,13 @@ func newPublicationRepository() PublicationRepository {
 	}
 }
 
+type PublicationSource string
+
+const (
+	PublicationSourceVFR PublicationSource = "vfr"
+	PublicationSourceIFR PublicationSource = "ifr"
+)
+
 func (r *publicationRepository) Index() []model.Publication {
 	cacheKey := time.Now().Format(time.DateOnly)
 
@@ -81,13 +88,22 @@ func (r *publicationRepository) Index() []model.Publication {
 		return cached
 	}
 
-	link, err := r.findEAIPLink()
+	vfrPublications := r.fetch(PublicationSourceVFR)
+	ifrPublications := r.fetch(PublicationSourceIFR)
+	publications := append(vfrPublications, ifrPublications...)
+
+	r.cache[cacheKey] = publications
+	return publications
+}
+
+func (r *publicationRepository) fetch(source PublicationSource) []model.Publication {
+	link, err := r.findEAIPLink(fmt.Sprintf("https://www.ais.pansa.pl/publikacje/aip-%s/", source), source)
 	if err != nil {
 		logrus.Error(err)
 		return nil
 	}
 
-	logrus.Infof("Found EAIP link: %s", link)
+	logrus.WithField("source", source).Infof("Found EAIP link: %s", link)
 
 	amendmentLink, err := r.findCurrentAmendmentLink(link)
 	if err != nil {
@@ -95,7 +111,7 @@ func (r *publicationRepository) Index() []model.Publication {
 		return nil
 	}
 
-	logrus.Infof("Found amendment link: %s", amendmentLink)
+	logrus.WithField("source", source).Infof("Found amendment link: %s", amendmentLink)
 
 	tabs, err := r.extractTabs(amendmentLink)
 	if err != nil {
@@ -103,19 +119,18 @@ func (r *publicationRepository) Index() []model.Publication {
 		return nil
 	}
 
-	logrus.Infof("Extracted %d tabs", len(tabs.Tabs))
+	logrus.WithField("source", source).Infof("Extracted %d tabs", len(tabs.Tabs))
 
-	publications := r.combine(tabs, amendmentLink)
+	publications := r.combine(tabs, amendmentLink, source)
 	publications = r.filterDuplicates(publications)
 
-	logrus.Infof("Found %d publications", len(publications))
+	logrus.WithField("source", source).Infof("Found %d publications", len(publications))
 
-	r.cache[cacheKey] = publications
 	return publications
 }
 
-func (r *publicationRepository) findEAIPLink() (string, error) {
-	resp, err := http.Get("https://www.ais.pansa.pl/publikacje/aip-vfr/")
+func (r *publicationRepository) findEAIPLink(root string, source PublicationSource) (string, error) {
+	resp, err := http.Get(root)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch URL: %v", err)
 	}
@@ -133,7 +148,7 @@ func (r *publicationRepository) findEAIPLink() (string, error) {
 	var eaipLink string
 	doc.Find("a").Each(func(i int, s *goquery.Selection) {
 		if href, exists := s.Attr("href"); exists {
-			if strings.Contains(strings.ToLower(href), "eaipvfr") {
+			if strings.Contains(strings.ToLower(href), "eaip"+string(source)) {
 				eaipLink = href
 			}
 		}
@@ -191,7 +206,7 @@ func (r *publicationRepository) extractTabs(amendmentLink string) (*PansaTabData
 
 	datasourceURL = strings.ReplaceAll(datasourceURL, "\\", "/")
 
-	logrus.Info("Fetching datasource.js from:", datasourceURL)
+	logrus.Info("Fetching datasource.js from: ", datasourceURL)
 
 	resp, err := http.Get(strings.ReplaceAll(datasourceURL, " ", "%20"))
 	if err != nil {
@@ -249,7 +264,7 @@ func (r *publicationRepository) extractIcao(name string) string {
 	return ""
 }
 
-func (r *publicationRepository) combine(tabs *PansaTabData, amendmentLink string) []model.Publication {
+func (r *publicationRepository) combine(tabs *PansaTabData, amendmentLink string, source PublicationSource) []model.Publication {
 	var publications []model.Publication
 
 	for _, tab := range tabs.Tabs {
@@ -266,9 +281,14 @@ func (r *publicationRepository) combine(tabs *PansaTabData, amendmentLink string
 						pubType = model.PublicationTypeGEN
 					}
 
+					icao := r.extractIcao(item.Title)
+					if pubType == model.PublicationTypeAD && icao == "" {
+						icao = "INFO"
+					}
+
 					publications = append(publications, model.Publication{
-						Icao: r.extractIcao(item.Title),
-						Name: strings.TrimSpace(item.Title),
+						Icao: icao,
+						Name: strings.ToUpper(string(source)) + " " + strings.TrimSpace(item.Title),
 						Link: r.getPDFLink(amendmentLink, item.Href),
 						Type: pubType,
 					})
