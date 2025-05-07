@@ -13,5 +13,6 @@ const (
 	PublicationTypeGEN     PublicationType = "GEN"
 	PublicationTypeAD      PublicationType = "AD"
 	PublicationTypeENR     PublicationType = "ENR"
+	PublicationTypeSUP     PublicationType = "SUP"
 	PublicationTypeUnknown PublicationType = "UNKNOWN"
 )

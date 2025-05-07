@@ -3,14 +3,15 @@ package repository
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/PuerkitoBio/goquery"
-	"github.com/kaptinlin/jsonrepair"
-	"github.com/matisiekpl/pansa-plan/internal/model"
-	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/PuerkitoBio/goquery"
+	"github.com/kaptinlin/jsonrepair"
+	"github.com/matisiekpl/pansa-plan/internal/model"
+	"github.com/sirupsen/logrus"
 )
 
 type PansaLanguage struct {
@@ -45,6 +46,37 @@ type PansaMenuItem struct {
 type PansaTabContent struct {
 	Title string          `json:"title"`
 	Menu  []PansaMenuItem `json:"menu"`
+	Table *PansaTable     `json:"table"`
+}
+
+type PansaTable struct {
+	Header PansaTableHeader `json:"header"`
+	Rows   []PansaTableRow  `json:"rows"`
+}
+
+type PansaTableHeader struct {
+	Year    string `json:"year"`
+	Affect  string `json:"affect"`
+	Period  string `json:"period"`
+	Subject string `json:"subject"`
+}
+
+type PansaTableRow struct {
+	Year struct {
+		ID    string `json:"id"`
+		Title string `json:"title"`
+		Href  string `json:"href"`
+		Text  string `json:"text"`
+	} `json:"year"`
+	Affects []struct {
+		Text string `json:"text"`
+	} `json:"affects"`
+	Period struct {
+		Text string `json:"text"`
+	} `json:"period"`
+	Subject struct {
+		Text string `json:"text"`
+	} `json:"subject"`
 }
 
 type PansaTab struct {
@@ -247,7 +279,14 @@ func (r *publicationRepository) getPDFLink(amendmentLink, href string) string {
 	href = strings.ReplaceAll(href, "-en-GB", "")
 	href = strings.ReplaceAll(href, ".html", ".pdf")
 	baseURL := amendmentLink[:strings.LastIndex(amendmentLink, "\\")+1]
-	link := baseURL + "documents/PDF/" + href + ".pdf"
+
+	var link string
+	if strings.Contains(href, "SUP_") {
+		link = baseURL + "eSUP/" + href
+	} else {
+		link = baseURL + "documents/PDF/" + href + ".pdf"
+	}
+
 	link = strings.ReplaceAll(link, " ", "%20")
 	link = strings.ReplaceAll(link, "\\", "/")
 	link = strings.TrimSpace(link)
@@ -255,6 +294,8 @@ func (r *publicationRepository) getPDFLink(amendmentLink, href string) string {
 }
 
 func (r *publicationRepository) extractIcao(name string) string {
+	name = strings.ReplaceAll(name, "(", " ")
+	name = strings.ReplaceAll(name, ")", " ")
 	words := strings.Fields(name)
 	for _, word := range words {
 		if len(word) == 4 && strings.HasPrefix(word, "EP") {
@@ -269,45 +310,60 @@ func (r *publicationRepository) combine(tabs *PansaTabData, amendmentLink string
 
 	for _, tab := range tabs.Tabs {
 		for _, content := range tab.Contents {
-			var processMenuItem func(item PansaMenuItem)
-			processMenuItem = func(item PansaMenuItem) {
-				if item.Href != "" {
-					pubType := model.PublicationTypeUnknown
-					if strings.Contains(item.Href, "AD") {
-						pubType = model.PublicationTypeAD
-					} else if strings.Contains(item.Href, "ENR") {
-						pubType = model.PublicationTypeENR
-					} else if strings.Contains(item.Href, "GEN") {
-						pubType = model.PublicationTypeGEN
+			if tab.Title == "SUPs" && content.Table != nil {
+				for _, row := range content.Table.Rows {
+					href := strings.TrimSpace(row.Year.Href)
+					if href != "" {
+						icao := r.extractIcao(row.Subject.Text)
+						publications = append(publications, model.Publication{
+							Icao: icao,
+							Name: r.standardizeSpaces(row.Subject.Text),
+							Link: r.getPDFLink(amendmentLink, href),
+							Type: model.PublicationTypeSUP,
+						})
+					}
+				}
+			} else {
+				var processMenuItem func(item PansaMenuItem)
+				processMenuItem = func(item PansaMenuItem) {
+					if item.Href != "" {
+						pubType := model.PublicationTypeUnknown
+						if strings.Contains(item.Href, "AD") {
+							pubType = model.PublicationTypeAD
+						} else if strings.Contains(item.Href, "ENR") {
+							pubType = model.PublicationTypeENR
+						} else if strings.Contains(item.Href, "GEN") {
+							pubType = model.PublicationTypeGEN
+						}
+
+						icao := r.extractIcao(item.Title)
+						if pubType == model.PublicationTypeAD && icao == "" {
+							icao = "INFO"
+						}
+
+						publications = append(publications, model.Publication{
+							Icao: icao,
+							Name: r.standardizeSpaces(strings.ToUpper(string(source)) + " " + item.Title),
+							Link: r.getPDFLink(amendmentLink, item.Href),
+							Type: pubType,
+						})
 					}
 
-					icao := r.extractIcao(item.Title)
-					if pubType == model.PublicationTypeAD && icao == "" {
-						icao = "INFO"
+					for _, child := range item.Children {
+						processMenuItem(child)
 					}
-
-					publications = append(publications, model.Publication{
-						Icao: icao,
-						Name: strings.ToUpper(string(source)) + " " + strings.TrimSpace(item.Title),
-						Link: r.getPDFLink(amendmentLink, item.Href),
-						Type: pubType,
-					})
 				}
 
-				for _, child := range item.Children {
-					processMenuItem(child)
+				for _, menu := range content.Menu {
+					processMenuItem(menu)
 				}
-			}
-
-			for _, menu := range content.Menu {
-				processMenuItem(menu)
 			}
 		}
 	}
 
 	filteredPublications := make([]model.Publication, 0)
 	for _, publication := range publications {
-		if strings.HasPrefix(publication.Link, "https") {
+		if strings.HasPrefix(publication.Link, "https") && publication.Type != model.PublicationTypeUnknown {
 			filteredPublications = append(filteredPublications, publication)
 		}
 	}
@@ -327,4 +383,8 @@ func (r *publicationRepository) filterDuplicates(publications []model.Publicatio
 	}
 
 	return unique
+}
+
+func (r *publicationRepository) standardizeSpaces(s string) string {
+	return strings.Join(strings.Fields(s), " ")
 }
