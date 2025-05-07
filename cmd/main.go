@@ -30,7 +30,7 @@ func main() {
 	e.HideBanner = true
 
 	e.GET("/", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]string{"message": "Hello world"})
+		return c.JSON(http.StatusOK, map[string]string{"service": "pansa-api", "contact": "Mateusz Woźniak <mateusz@mateuszwozniak.com>"})
 	})
 	e.GET("/report", controllers.Report().Generate)
 	e.GET("/aip", controllers.Publication().Index)
