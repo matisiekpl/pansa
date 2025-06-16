@@ -132,7 +132,7 @@ func (r *publicationRepository) Index(language model.Language) []model.Publicati
 }
 
 func (r *publicationRepository) fetch(source PublicationSource, language model.Language) []model.Publication {
-	link, err := r.findEAIPLink(fmt.Sprintf("https://www.ais.pansa.pl/publikacje/aip-%s/", source), source)
+	link, err := r.findEAIPLink("https://www.ais.pansa.pl/publikacje/aip-polska/", source)
 	if err != nil {
 		logrus.Error(err)
 		return nil
