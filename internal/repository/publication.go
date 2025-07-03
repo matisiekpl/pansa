@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -96,15 +97,22 @@ type PublicationRepository interface {
 }
 
 type publicationRepository struct {
-	cache map[model.Language]map[string][]model.Publication
+	cache  map[model.Language]map[string][]model.Publication
+	client *http.Client
 }
 
 func newPublicationRepository() PublicationRepository {
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+
 	return &publicationRepository{
 		cache: map[model.Language]map[string][]model.Publication{
 			model.LanguageEnglish: make(map[string][]model.Publication),
 			model.LanguagePolish:  make(map[string][]model.Publication),
 		},
+		client: client,
 	}
 }
 
@@ -165,7 +173,7 @@ func (r *publicationRepository) fetch(source PublicationSource, language model.L
 }
 
 func (r *publicationRepository) findEAIPLink(root string, source PublicationSource) (string, error) {
-	resp, err := http.Get(root)
+	resp, err := r.client.Get(root)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch URL: %v", err)
 	}
@@ -197,7 +205,7 @@ func (r *publicationRepository) findEAIPLink(root string, source PublicationSour
 }
 
 func (r *publicationRepository) findCurrentAmendmentLink(eaipLink string) (string, error) {
-	resp, err := http.Get(eaipLink)
+	resp, err := r.client.Get(eaipLink)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch URL: %v", err)
 	}
@@ -243,7 +251,7 @@ func (r *publicationRepository) extractTabs(amendmentLink string) (*PansaTabData
 
 	logrus.Info("Fetching datasource.js from: ", datasourceURL)
 
-	resp, err := http.Get(strings.ReplaceAll(datasourceURL, " ", "%20"))
+	resp, err := r.client.Get(strings.ReplaceAll(datasourceURL, " ", "%20"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch datasource.js: %v", err)
 	}
