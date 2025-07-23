@@ -338,8 +338,8 @@ func (r *publicationRepository) combine(tabs *PansaTabData, amendmentLink string
 				}
 			}
 		} else {
-			var processMenuItem func(item PansaMenuItem)
-			processMenuItem = func(item PansaMenuItem) {
+			var processMenuItem func(item PansaMenuItem, parentTitle string)
+			processMenuItem = func(item PansaMenuItem, parentTitle string) {
 				if item.Href != "" {
 					pubType := model.PublicationTypeUnknown
 					if strings.Contains(item.Href, "AD") {
@@ -355,21 +355,25 @@ func (r *publicationRepository) combine(tabs *PansaTabData, amendmentLink string
 						icao = "INFO"
 					}
 
+					title := item.Title
+					if title == "►" {
+						title = parentTitle
+					}
 					publications = append(publications, model.Publication{
 						Icao: icao,
-						Name: r.standardizeSpaces(strings.ToUpper(string(source)) + " " + item.Title),
+						Name: r.standardizeSpaces(strings.ToUpper(string(source)) + " " + title),
 						Link: r.getPDFLink(amendmentLink, item.Href),
 						Type: pubType,
 					})
 				}
 
 				for _, child := range item.Children {
-					processMenuItem(child)
+					processMenuItem(child, item.Title)
 				}
 			}
 
 			for _, menu := range content.Menu {
-				processMenuItem(menu)
+				processMenuItem(menu, content.Title)
 			}
 		}
 
