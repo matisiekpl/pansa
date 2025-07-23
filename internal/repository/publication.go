@@ -316,7 +316,6 @@ func (r *publicationRepository) extractIcao(name string) string {
 			return word
 		}
 	}
-	fmt.Println(name)
 	return ""
 }
 
@@ -359,6 +358,9 @@ func (r *publicationRepository) combine(tabs *PansaTabData, amendmentLink string
 					name := r.standardizeSpaces(strings.ToUpper(string(source)) + " " + title)
 
 					icao := r.extractIcao(name)
+					if icao == "" {
+						icao = r.extractIcao(item.Href)
+					}
 					if icao == "" {
 						icao = "INFO"
 					}
