@@ -121,6 +121,7 @@ type PublicationSource string
 const (
 	PublicationSourceVFR PublicationSource = "vfr"
 	PublicationSourceIFR PublicationSource = "ifr"
+	PublicationSourceMIL PublicationSource = "mil"
 )
 
 func (r *publicationRepository) Index(language model.Language) []model.Publication {
@@ -133,7 +134,9 @@ func (r *publicationRepository) Index(language model.Language) []model.Publicati
 
 	vfrPublications := r.fetch(PublicationSourceVFR, language)
 	ifrPublications := r.fetch(PublicationSourceIFR, language)
+	milPublications := r.fetch(PublicationSourceMIL, language)
 	publications := append(vfrPublications, ifrPublications...)
+	publications = append(publications, milPublications...)
 
 	r.cache[language][cacheKey] = publications
 	return publications
