@@ -361,9 +361,6 @@ func (r *publicationRepository) combine(tabs *PansaTabData, amendmentLink string
 					if icao == "" {
 						icao = r.extractIcao(item.Href)
 					}
-					if icao == "" {
-						icao = "INFO"
-					}
 
 					publications = append(publications, model.Publication{
 						Icao: icao,
