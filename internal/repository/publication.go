@@ -316,6 +316,7 @@ func (r *publicationRepository) extractIcao(name string) string {
 			return word
 		}
 	}
+	fmt.Println(name)
 	return ""
 }
 
@@ -350,18 +351,21 @@ func (r *publicationRepository) combine(tabs *PansaTabData, amendmentLink string
 						pubType = model.PublicationTypeGEN
 					}
 
-					icao := r.extractIcao(item.Title)
-					if pubType == model.PublicationTypeAD && icao == "" {
-						icao = "INFO"
-					}
-
 					title := item.Title
 					if title == "►" {
 						title = parentTitle
 					}
+
+					name := r.standardizeSpaces(strings.ToUpper(string(source)) + " " + title)
+
+					icao := r.extractIcao(name)
+					if icao == "" {
+						icao = "INFO"
+					}
+
 					publications = append(publications, model.Publication{
 						Icao: icao,
-						Name: r.standardizeSpaces(strings.ToUpper(string(source)) + " " + title),
+						Name: name,
 						Link: r.getPDFLink(amendmentLink, item.Href),
 						Type: pubType,
 					})
