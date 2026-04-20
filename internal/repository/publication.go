@@ -264,6 +264,8 @@ func (r *publicationRepository) extractTabs(amendmentLink string) (*PansaTabData
 		return nil, fmt.Errorf("status code error: %d", resp.StatusCode)
 	}
 
+	logrus.Infof("Fetched datasource.js: %s", resp.Status)
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %v", err)
