@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/kaptinlin/jsonrepair"
 	"github.com/matisiekpl/pansa-plan/internal/model"
 	"github.com/sirupsen/logrus"
 )
@@ -276,10 +276,8 @@ func (r *publicationRepository) extractTabs(amendmentLink string) (*PansaTabData
 	content = strings.TrimSuffix(content, ";")
 	content = strings.ReplaceAll(content, "\t", "")
 
-	content, err = jsonrepair.Repair(content)
-	if err != nil {
-		return nil, fmt.Errorf("failed to repair JSON: %v", err)
-	}
+	trailingCommaRegex := regexp.MustCompile(`,(\s*])`)
+	content = trailingCommaRegex.ReplaceAllString(content, "$1")
 
 	var data PansaTabData
 	if err := json.Unmarshal([]byte(content), &data); err != nil {
