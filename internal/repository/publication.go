@@ -274,7 +274,7 @@ func (r *publicationRepository) extractTabs(amendmentLink string) (*PansaTabData
 	content = strings.TrimSuffix(content, ";")
 	content = strings.ReplaceAll(content, "\t", "")
 
-	content, err = jsonrepair.JSONRepair(content)
+	content, err = jsonrepair.Repair(content)
 	if err != nil {
 		return nil, fmt.Errorf("failed to repair JSON: %v", err)
 	}
