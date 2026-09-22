@@ -1,0 +1,104 @@
+openapi: 3.0.3
+info:
+  title: PANSA API
+  description: REST API for AIP publications and NOTAMs.
+  version: 1.0.0
+servers:
+  - url: /
+tags:
+  - name: status
+  - name: publications
+  - name: notams
+paths:
+  /:
+    get:
+      tags: [status]
+      summary: Service information
+      responses:
+        '200':
+          description: Service name and contact
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                    example: pansa-api
+                  contact:
+                    type: string
+
+  /aip:
+    get:
+      tags: [publications]
+      summary: List AIP publications
+      parameters:
+        - name: language
+          in: query
+          required: false
+          description: Publication language. Defaults to pl-PL.
+          schema:
+            type: string
+            enum: [pl-PL, en-GB]
+            default: pl-PL
+      responses:
+        '200':
+          description: Publications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Publication'
+
+  /notam/{icao}:
+    get:
+      tags: [notams]
+      summary: List active NOTAMs for a location
+      description: >
+        Returns NOTAMs from the FAA NMS-API in ICAO format. Requires FAA_KEY and
+        FAA_SECRET to be configured, otherwise the endpoint responds with 503.
+      parameters:
+        - name: icao
+          in: path
+          required: true
+          description: Location identifier in ICAO or domestic format, case insensitive.
+          schema:
+            type: string
+            example: EPKK
+      responses:
+        '200':
+          description: NOTAM texts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example:
+                  - "A2721/26 NOTAMN\nQ) EPWW/QWPLW/IV/M/AW/000/060/5003N01956E003\nA) EPKK B) 2609250930 C) 2609251100\nE) NAVIGATION WARNING - PJE KRAKOW."
+        '503':
+          description: NOTAM feature disabled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: notam feature disabled
+
+components:
+  schemas:
+    Publication:
+      type: object
+      properties:
+        icao:
+          type: string
+        name:
+          type: string
+        link:
+          type: string
+        kind:
+          type: string
+          enum: [GEN, AD, ENR, SUP, UNKNOWN]

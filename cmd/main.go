@@ -41,6 +41,8 @@ func main() {
 	})
 	e.GET("/report", controllers.Report().Generate)
 	e.GET("/aip", controllers.Publication().Index)
+	e.GET("/docs", controllers.Scalar().UI)
+	e.GET("/docs/openapi.yaml", controllers.Scalar().Spec)
 	if config.NotamEnabled() {
 		e.GET("/notam/:icao", controllers.Notam().Index)
 	} else {
