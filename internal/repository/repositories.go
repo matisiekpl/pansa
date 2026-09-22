@@ -1,5 +1,7 @@
 package repository
 
+import "github.com/matisiekpl/pansa-plan/internal/dto"
+
 type Repositories interface {
 	Publication() PublicationRepository
 	Notam() NotamRepository
@@ -29,9 +31,9 @@ func (r repositories) Weather() WeatherRepository {
 	return r.weather
 }
 
-func NewRepositories() Repositories {
+func NewRepositories(config dto.Config) Repositories {
 	publicationRepository := newPublicationRepository()
-	notamRepository := newNotamRepository()
+	notamRepository := newNotamRepository(config)
 	reportRepository := newReportRepository()
 	weatherRepository := newWeatherRepository()
 	return &repositories{

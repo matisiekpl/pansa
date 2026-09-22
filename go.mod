@@ -10,9 +10,8 @@ require (
 	github.com/aymerick/raymond v2.0.2+incompatible
 	github.com/flopp/go-staticmaps v0.0.0-20260318105611-d3eb636a6468
 	github.com/golang/geo v0.0.0-20260415063119-550b242b3150
-	github.com/kaptinlin/jsonrepair v0.3.0
+	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v4 v4.15.1
-	github.com/matisiekpl/notam v0.0.0-20260420171904-9e27a5c719f6
 	github.com/sirupsen/logrus v1.9.4
 )
 
@@ -20,8 +19,6 @@ require (
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/flopp/go-coordsparser v0.0.0-20250311184423-61a7ff62d17c // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
-	github.com/go-json-experiment/json v0.0.0-20260214004413-d219187c3433 // indirect
-	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/labstack/gommon v0.5.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect

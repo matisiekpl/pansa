@@ -4,9 +4,11 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/awslabs/aws-lambda-go-api-proxy/echo"
 	"github.com/aymerick/raymond"
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/matisiekpl/pansa-plan/internal/controller"
+	"github.com/matisiekpl/pansa-plan/internal/dto"
 	"github.com/matisiekpl/pansa-plan/internal/repository"
 	"github.com/matisiekpl/pansa-plan/internal/service"
 	"github.com/sirupsen/logrus"
@@ -20,7 +22,12 @@ func main() {
 		return strconv.Itoa(val1 + 1)
 	})
 
-	repositories := repository.NewRepositories()
+	if err := godotenv.Load(); err != nil {
+		logrus.Info("no .env file loaded")
+	}
+
+	config := dto.NewConfig()
+	repositories := repository.NewRepositories(config)
 	services := service.NewServices(repositories)
 	controllers := controller.NewControllers(services)
 
@@ -34,7 +41,14 @@ func main() {
 	})
 	e.GET("/report", controllers.Report().Generate)
 	e.GET("/aip", controllers.Publication().Index)
-	e.GET("/notam/:icao", controllers.Notam().Index)
+	if config.NotamEnabled() {
+		e.GET("/notam/:icao", controllers.Notam().Index)
+	} else {
+		logrus.Warn("notam feature disabled: missing FAA_KEY/FAA_SECRET")
+		e.GET("/notam/:icao", func(c echo.Context) error {
+			return c.JSON(http.StatusServiceUnavailable, map[string]string{"error": "notam feature disabled"})
+		})
+	}
 
 	port := os.Getenv("PORT")
 	if port == "" {
